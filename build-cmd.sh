@@ -66,13 +66,19 @@ pushd "$OPENJPEG_SOURCE_DIR"
                 cp bin/Debug/openjp2{.dll,.lib,.pdb} "$stage/lib/debug"
 
                 cp src/lib/openjp2/opj_config.h "$stage/include/openjpeg"
-                cp src/lib/openjp2/opj_config_private.h "$stage/include/openjpeg"
+
+                # version will be (e.g.) "1.4.0"
+                version=`sed -n -E 's/#define OPJ_PACKAGE_VERSION "([0-9])[.]([0-9])[.]([0-9]).*/\1.\2.\3/p' "src/lib/openjp2/opj_config_private.h"`
+                # shortver will be (e.g.) "230": eliminate all '.' chars
+                # since the libs do not use micro in their filenames, chop off shortver at minor
+                short="$(echo $version | cut -d"." -f1-2)"
+                shortver="${short//.}"
+
+                echo "${version}" > "${stage}/VERSION.txt"
             popd
 
             cp src/lib/openjp2/openjpeg.h "$stage/include/openjpeg"
             cp src/lib/openjp2/opj_stdint.h "$stage/include/openjpeg"
-            cp src/lib/openjp2/event.h "$stage/include/openjpeg"
-            cp src/lib/openjp2/cio.h "$stage/include/openjpeg"
         ;;
         "darwin64")
             cmake . -GXcode -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64 \
@@ -159,20 +165,19 @@ pushd "$OPENJPEG_SOURCE_DIR"
                 mv ${stage}/lib/*.so* ${stage}/lib/release
                 mv ${stage}/lib/*.a* ${stage}/lib/release
 
-                cp src/lib/openjp2/opj_config.h "$stage/include/openjpeg"
-                cp src/lib/openjp2/opj_config_private.h "$stage/include/openjpeg"
+                # version will be (e.g.) "1.4.0"
+                version=`sed -n -E 's/#define OPJ_PACKAGE_VERSION "([0-9])[.]([0-9])[.]([0-9]).*/\1.\2.\3/p' "src/lib/openjp2/opj_config_private.h"`
+                # shortver will be (e.g.) "230": eliminate all '.' chars
+                # since the libs do not use micro in their filenames, chop off shortver at minor
+                short="$(echo $version | cut -d"." -f1-2)"
+                shortver="${short//.}"
+
+                echo "${version}" > "${stage}/VERSION.txt"
             popd
+
+            cp $stage/include/openjpeg-2.4/*.h "$stage/include/openjpeg"
         ;;
     esac
     mkdir -p "$stage/LICENSES"
     cp LICENSE "$stage/LICENSES/openjpeg.txt"
-
-    # version will be (e.g.) "1.4.0"
-    version=`sed -n -E 's/#define OPJ_PACKAGE_VERSION "([0-9])[.]([0-9])[.]([0-9]).*/\1.\2.\3/p' "${VERSION_HEADER_FILE}"`
-    # shortver will be (e.g.) "230": eliminate all '.' chars
-    # since the libs do not use micro in their filenames, chop off shortver at minor
-    short="$(echo $version | cut -d"." -f1-2)"
-    shortver="${short//.}"
-
-    echo "${version}" > "${stage}/VERSION.txt"
 popd
