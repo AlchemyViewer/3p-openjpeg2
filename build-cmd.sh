@@ -31,7 +31,7 @@ source_environment_tempfile="$stage/source_environment.sh"
 
 OPENJPEG_SOURCE_DIR="openjpeg"
 
-VERSION_HEADER_FILE="$stage/include/openjpeg/opj_config_private.h"
+VERSION_HEADER_FILE="build/src/lib/openjp2/opj_config_private.h"
 
 build=${AUTOBUILD_BUILD_ID:=0}
 
