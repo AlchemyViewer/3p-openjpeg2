@@ -86,8 +86,8 @@
           </map>
           <key>manifest</key>
           <array>
-            <string>lib/debug/libopenjp2.a</string>
-            <string>lib/release/libopenjp2.a</string>
+            <string>lib/debug/libopenjp2.so*</string>
+            <string>lib/release/libopenjp2.so*</string>
           </array>
           <key>name</key>
           <string>linux</string>
