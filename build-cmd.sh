@@ -29,20 +29,11 @@ source_environment_tempfile="$stage/source_environment.sh"
 "$autobuild" source_environment > "$source_environment_tempfile"
 . "$source_environment_tempfile"
 
-OPENJPEG_SOURCE_DIR="openjpeg2"
+OPENJPEG_SOURCE_DIR="openjpeg"
 
-VERSION_HEADER_FILE="$OPENJPEG_SOURCE_DIR/libopenjpeg/openjpeg.h"
+VERSION_HEADER_FILE="$stage/include/openjpeg/opj_config_private.h"
 
 build=${AUTOBUILD_BUILD_ID:=0}
-
-# version will be (e.g.) "1.4.0"
-version=`sed -n -E 's/#define OPENJPEG_VERSION "([0-9])[.]([0-9])[.]([0-9]).*/\1.\2.\3/p' "${VERSION_HEADER_FILE}"`
-# shortver will be (e.g.) "230": eliminate all '.' chars
-#since the libs do not use micro in their filenames, chop off shortver at minor
-short="$(echo $version | cut -d"." -f1-2)"
-shortver="${short//.}"
-
-echo "${version}.${build}" > "${stage}/VERSION.txt"
 
 # Create the staging folders
 mkdir -p "$stage/lib"/{debug,release}
@@ -71,11 +62,17 @@ pushd "$OPENJPEG_SOURCE_DIR"
                 cmake --build . --config Debug --clean-first
                 cmake --build . --config Release --clean-first
 
-                cp bin/Release/openjpeg{.dll,.lib,.pdb} "$stage/lib/release"
-                cp bin/Debug/openjpeg{.dll,.lib,.pdb} "$stage/lib/debug"
+                cp bin/Release/openjp2{.dll,.lib,.pdb} "$stage/lib/release"
+                cp bin/Debug/openjp2{.dll,.lib,.pdb} "$stage/lib/debug"
+
+                cp src/lib/openjp2/opj_config.h "$stage/include/openjpeg"
+                cp src/lib/openjp2/opj_config_private.h "$stage/include/openjpeg"
             popd
-            cp libopenjpeg/openjpeg.h "$stage/include/openjpeg-1.5"
-            cp libopenjpeg/opj_stdint.h "$stage/include/openjpeg-1.5"
+
+            cp src/lib/openjp2/openjpeg.h "$stage/include/openjpeg"
+            cp src/lib/openjp2/opj_stdint.h "$stage/include/openjpeg"
+            cp src/lib/openjp2/event.h "$stage/include/openjpeg"
+            cp src/lib/openjp2/cio.h "$stage/include/openjpeg"
         ;;
         "darwin64")
             cmake . -GXcode -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64 \
@@ -106,18 +103,18 @@ pushd "$OPENJPEG_SOURCE_DIR"
             # but which do nonetheless.
             #
             unset DISTCC_HOSTS CC CXX CFLAGS CPPFLAGS CXXFLAGS
-
-            # Default target per autobuild build --address-size
+        
+            # Default target per --address-size
             opts="${TARGET_OPTS:--m$AUTOBUILD_ADDRSIZE}"
-            DEBUG_COMMON_FLAGS="$opts -Og -msse2 -g -fPIC -DPIC"
-            RELEASE_COMMON_FLAGS="$opts -O3 -msse2 -ffast-math -g -fPIC -DPIC -fstack-protector-strong -D_FORTIFY_SOURCE=2"
+            DEBUG_COMMON_FLAGS="$opts -Og -g -fPIC -DPIC"
+            RELEASE_COMMON_FLAGS="$opts -O3 -ffast-math -msse2 -g -fPIC -fstack-protector-strong -DPIC -D_FORTIFY_SOURCE=2"
             DEBUG_CFLAGS="$DEBUG_COMMON_FLAGS"
             RELEASE_CFLAGS="$RELEASE_COMMON_FLAGS"
             DEBUG_CXXFLAGS="$DEBUG_COMMON_FLAGS -std=c++17"
             RELEASE_CXXFLAGS="$RELEASE_COMMON_FLAGS -std=c++17"
             DEBUG_CPPFLAGS="-DPIC"
-            RELEASE_CPPFLAGS="-DPIC"
-
+            RELEASE_CPPFLAGS="-DPIC -D_FORTIFY_SOURCE=2"
+        
             JOBS=`cat /proc/cpuinfo | grep processor | wc -l`
 
             # Handle any deliberate platform targeting
@@ -129,50 +126,48 @@ pushd "$OPENJPEG_SOURCE_DIR"
                 export CPPFLAGS="$TARGET_CPPFLAGS"
             fi
 
-            # Fix up path for pkgconfig
-            if [ -d "$stage/packages/lib/release/pkgconfig" ]; then
-                fix_pkgconfig_prefix "$stage/packages"
-            fi
+            # Debug
+            mkdir -p "build_debug"
+            pushd "build_debug"
+                CFLAGS="$DEBUG_CFLAGS" \
+                CXXFLAGS="$DEBUG_CXXFLAGS" \
+                CPPFLAGS="$DEBUG_CPPFLAGS" \
+                    cmake ../ -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug \
+                        -DCMAKE_INSTALL_PREFIX="$stage"
 
-            autoreconf -fvi
+                make -j$JOBS
+                make install
 
-            OLD_PKG_CONFIG_PATH="${PKG_CONFIG_PATH:-}"
+                mkdir -p ${stage}/lib/debug
+                mv ${stage}/lib/*.so* ${stage}/lib/debug
+            popd
 
-            # Debug first
-            export PKG_CONFIG_PATH="$stage/packages/lib/debug/pkgconfig:${OLD_PKG_CONFIG_PATH}"
+            # Release
+            mkdir -p "build_release"
+            pushd "build_release"
+                CFLAGS="$RELEASE_CFLAGS" \
+                CXXFLAGS="$RELEASE_CXXFLAGS" \
+                CPPFLAGS="$RELEASE_CPPFLAGS" \
+                    cmake ../ -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Release \
+                        -DCMAKE_INSTALL_PREFIX="$stage"
 
-            CFLAGS="$DEBUG_CFLAGS" CXXFLAGS="$DEBUG_CXXFLAGS" CPPFLAGS="$DEBUG_CPPFLAGS" \
-                ./configure --enable-png=no --enable-lcms1=no --enable-lcms2=no --enable-tiff=no \
-                    --prefix="\${AUTOBUILD_PACKAGES_DIR}" --includedir="\${prefix}/include" --libdir="\${prefix}/lib/debug"
-            make -j$JOBS
-            make install DESTDIR="$stage"
+                make -j$JOBS
+                make install
 
-            # conditionally run unit tests
-            # if [ "${DISABLE_UNIT_TESTS:-0}" = "0" ]; then
-            #     make test
-            # fi
-
-            # clean the build artifacts
-            make distclean
-
-            # Release last
-            export PKG_CONFIG_PATH="$stage/packages/lib/release/pkgconfig:${OLD_PKG_CONFIG_PATH}"
-
-            CFLAGS="$RELEASE_CFLAGS" CXXFLAGS="$RELEASE_CXXFLAGS" CPPFLAGS="$RELEASE_CPPFLAGS" \
-                ./configure --enable-png=no --enable-lcms1=no --enable-lcms2=no --enable-tiff=no \
-                    --prefix="\${AUTOBUILD_PACKAGES_DIR}" --includedir="\${prefix}/include" --libdir="\${prefix}/lib/release"
-            make -j$JOBS
-            make install DESTDIR="$stage"
-
-            # conditionally run unit tests
-            # if [ "${DISABLE_UNIT_TESTS:-0}" = "0" ]; then
-            #     make test
-            # fi
-
-            # clean the build artifacts
-            make distclean
+                mkdir -p ${stage}/lib/release
+                mv ${stage}/lib/*.so* ${stage}/lib/release
+            popd
         ;;
     esac
     mkdir -p "$stage/LICENSES"
     cp LICENSE "$stage/LICENSES/openjpeg.txt"
+
+    # version will be (e.g.) "1.4.0"
+     version=`sed -n -E 's/#define OPJ_PACKAGE_VERSION "([0-9])[.]([0-9])[.]([0-9]).*/\1.\2.\3/p' "${VERSION_HEADER_FILE}"`
+    # shortver will be (e.g.) "230": eliminate all '.' chars
+    # since the libs do not use micro in their filenames, chop off shortver at minor
+    short="$(echo $version | cut -d"." -f1-2)"
+    shortver="${short//.}"
+
+    echo "${version}" > "${stage}/VERSION.txt"
 popd

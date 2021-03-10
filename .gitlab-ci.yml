@@ -3,5 +3,8 @@ include:
     file: '3p-library-build.yml'
 
 variables:
-  AUTOBUILD_PACKAGE_DIR: openjpeg
-  AUTOBUILD_PACKAGE_NAME: openjpeg
+  BUILD_COMMON: 0
+  BUILD_WINDOWS: 0
+  BUILD_WINDOWS64: 1
+  BUILD_LINUX64: 1
+  BUILD_MACOS: 0
