@@ -1,0 +1,7 @@
+include:
+  - project: 'alchemy/infrastructure/gitlab-ci-config'
+    file: '3p-library-build.yml'
+
+variables:
+  AUTOBUILD_PACKAGE_DIR: openjpeg
+  AUTOBUILD_PACKAGE_NAME: openjpeg
