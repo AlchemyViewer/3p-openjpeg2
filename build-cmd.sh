@@ -140,6 +140,7 @@ pushd "$OPENJPEG_SOURCE_DIR"
 
                 mkdir -p ${stage}/lib/debug
                 mv ${stage}/lib/*.so* ${stage}/lib/debug
+                mv ${stage}/lib/*.a* ${stage}/lib/debug
             popd
 
             # Release
@@ -156,6 +157,7 @@ pushd "$OPENJPEG_SOURCE_DIR"
 
                 mkdir -p ${stage}/lib/release
                 mv ${stage}/lib/*.so* ${stage}/lib/release
+                mv ${stage}/lib/*.a* ${stage}/lib/release
 
                 cp src/lib/openjp2/opj_config.h "$stage/include/openjpeg"
                 cp src/lib/openjp2/opj_config_private.h "$stage/include/openjpeg"
