@@ -31,7 +31,7 @@ source_environment_tempfile="$stage/source_environment.sh"
 
 OPENJPEG_SOURCE_DIR="openjpeg"
 
-VERSION_HEADER_FILE="build/src/lib/openjp2/opj_config_private.h"
+VERSION_HEADER_FILE="$stage/include/openjpeg/opj_config_private.h"
 
 build=${AUTOBUILD_BUILD_ID:=0}
 
@@ -156,6 +156,9 @@ pushd "$OPENJPEG_SOURCE_DIR"
 
                 mkdir -p ${stage}/lib/release
                 mv ${stage}/lib/*.so* ${stage}/lib/release
+
+                cp src/lib/openjp2/opj_config.h "$stage/include/openjpeg"
+                cp src/lib/openjp2/opj_config_private.h "$stage/include/openjpeg"
             popd
         ;;
     esac
@@ -163,7 +166,7 @@ pushd "$OPENJPEG_SOURCE_DIR"
     cp LICENSE "$stage/LICENSES/openjpeg.txt"
 
     # version will be (e.g.) "1.4.0"
-     version=`sed -n -E 's/#define OPJ_PACKAGE_VERSION "([0-9])[.]([0-9])[.]([0-9]).*/\1.\2.\3/p' "${VERSION_HEADER_FILE}"`
+    version=`sed -n -E 's/#define OPJ_PACKAGE_VERSION "([0-9])[.]([0-9])[.]([0-9]).*/\1.\2.\3/p' "${VERSION_HEADER_FILE}"`
     # shortver will be (e.g.) "230": eliminate all '.' chars
     # since the libs do not use micro in their filenames, chop off shortver at minor
     short="$(echo $version | cut -d"." -f1-2)"
