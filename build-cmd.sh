@@ -204,7 +204,7 @@ pushd "$OPENJPEG_SOURCE_DIR"
             unset DISTCC_HOSTS CFLAGS CPPFLAGS CXXFLAGS
         
             # Default target per --address-size
-            opts="${TARGET_OPTS:--m$AUTOBUILD_ADDRSIZE} -fuse-ld=lld"
+            opts="${TARGET_OPTS:--m$AUTOBUILD_ADDRSIZE}"
             SIMD_FLAGS="-msse -msse2 -msse3 -mssse3 -msse4 -msse4.1 -msse4.2 -mcx16 -mpopcnt -mpclmul -maes"
             DEBUG_COMMON_FLAGS="$opts -Og -g -fPIC -DPIC $SIMD_FLAGS"
             RELEASE_COMMON_FLAGS="$opts -O3 -flto=thin -ffast-math -g -fPIC -DPIC -fstack-protector-strong -D_FORTIFY_SOURCE=2 $SIMD_FLAGS"
@@ -214,9 +214,8 @@ pushd "$OPENJPEG_SOURCE_DIR"
             RELEASE_CXXFLAGS="$RELEASE_COMMON_FLAGS -std=c++17"
             DEBUG_CPPFLAGS="-DPIC"
             RELEASE_CPPFLAGS="-DPIC -D_FORTIFY_SOURCE=2"
-        
-            JOBS=`cat /proc/cpuinfo | grep processor | wc -l`
-
+            COMMON_LDFLAGS="-fuse-ld=lld"
+ 
             # Handle any deliberate platform targeting
             if [ -z "${TARGET_CPPFLAGS:-}" ]; then
                 # Remove sysroot contamination from build environment
@@ -232,15 +231,20 @@ pushd "$OPENJPEG_SOURCE_DIR"
                 CFLAGS="$DEBUG_CFLAGS" \
                 CXXFLAGS="$DEBUG_CXXFLAGS" \
                 CPPFLAGS="$DEBUG_CPPFLAGS" \
-                    cmake ../ -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug \
-                        -DCMAKE_INSTALL_PREFIX="$stage"
+                    cmake ../ -G"Ninja" \
+                        -DCMAKE_BUILD_TYPE=Debug \
+                        -DCMAKE_C_FLAGS="$DEBUG_CFLAGS" \
+                        -DCMAKE_CXX_FLAGS="$DEBUG_CXXFLAGS" \
+                        -DCMAKE_SHARED_LINKER_FLAGS="$COMMON_LDFLAGS"
+                        -DCMAKE_EXE_LINKER_FLAGS="$COMMON_LDFLAGS"
+                        -DCMAKE_INSTALL_PREFIX="$stage/install_debug"
 
-                make -j$JOBS
-                make install
+                cmake --build . --config Debug --parallel $AUTOBUILD_CPU_COUNT -v
+                cmake --install . --config Debug
 
                 mkdir -p ${stage}/lib/debug
-                mv ${stage}/lib/*.so* ${stage}/lib/debug
-                mv ${stage}/lib/*.a* ${stage}/lib/debug
+                mv ${stage}/install_debug/lib/*.so* ${stage}/lib/debug
+                mv ${stage}/install_debug/lib/*.a* ${stage}/lib/debug
             popd
 
             # Release
@@ -249,15 +253,20 @@ pushd "$OPENJPEG_SOURCE_DIR"
                 CFLAGS="$RELEASE_CFLAGS" \
                 CXXFLAGS="$RELEASE_CXXFLAGS" \
                 CPPFLAGS="$RELEASE_CPPFLAGS" \
-                    cmake ../ -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Release \
-                        -DCMAKE_INSTALL_PREFIX="$stage"
+                    cmake ../ -G"Ninja" \
+                        -DCMAKE_BUILD_TYPE=Release \
+                        -DCMAKE_C_FLAGS="$RELEASE_CFLAGS" \
+                        -DCMAKE_CXX_FLAGS="$RELEASE_CXXFLAGS" \
+                        -DCMAKE_SHARED_LINKER_FLAGS="$COMMON_LDFLAGS"
+                        -DCMAKE_EXE_LINKER_FLAGS="$COMMON_LDFLAGS"
+                        -DCMAKE_INSTALL_PREFIX="$stage/install_release"
 
-                make -j$JOBS
-                make install
+                cmake --build . --config Release --parallel $AUTOBUILD_CPU_COUNT
+                cmake --install . --config Release
 
                 mkdir -p ${stage}/lib/release
-                mv ${stage}/lib/*.so* ${stage}/lib/release
-                mv ${stage}/lib/*.a* ${stage}/lib/release
+                mv ${stage}/install_release/lib/*.so* ${stage}/lib/release
+                mv ${stage}/install_release/lib/*.a* ${stage}/lib/release
 
                 # version will be (e.g.) "1.4.0"
                 version=`sed -n -E 's/#define OPJ_PACKAGE_VERSION "([0-9])[.]([0-9])[.]([0-9]).*/\1.\2.\3/p' "src/lib/openjp2/opj_config_private.h"`
