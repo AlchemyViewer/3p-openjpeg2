@@ -207,14 +207,13 @@ pushd "$OPENJPEG_SOURCE_DIR"
             opts="${TARGET_OPTS:--m$AUTOBUILD_ADDRSIZE}"
             SIMD_FLAGS="-msse -msse2 -msse3 -mssse3 -msse4 -msse4.1 -msse4.2 -mcx16 -mpopcnt -mpclmul -maes"
             DEBUG_COMMON_FLAGS="$opts -Og -g -fPIC -DPIC $SIMD_FLAGS"
-            RELEASE_COMMON_FLAGS="$opts -O3 -flto=thin -ffast-math -g -fPIC -DPIC -fstack-protector-strong -D_FORTIFY_SOURCE=2 $SIMD_FLAGS"
+            RELEASE_COMMON_FLAGS="$opts -O3 -ffast-math -g -fPIC -DPIC -fstack-protector-strong -D_FORTIFY_SOURCE=2 $SIMD_FLAGS"
             DEBUG_CFLAGS="$DEBUG_COMMON_FLAGS"
             RELEASE_CFLAGS="$RELEASE_COMMON_FLAGS"
             DEBUG_CXXFLAGS="$DEBUG_COMMON_FLAGS -std=c++17"
             RELEASE_CXXFLAGS="$RELEASE_COMMON_FLAGS -std=c++17"
             DEBUG_CPPFLAGS="-DPIC"
             RELEASE_CPPFLAGS="-DPIC -D_FORTIFY_SOURCE=2"
-            COMMON_LDFLAGS="-fuse-ld=lld"
  
             # Handle any deliberate platform targeting
             if [ -z "${TARGET_CPPFLAGS:-}" ]; then
@@ -235,8 +234,6 @@ pushd "$OPENJPEG_SOURCE_DIR"
                         -DCMAKE_BUILD_TYPE=Debug \
                         -DCMAKE_C_FLAGS="$DEBUG_CFLAGS" \
                         -DCMAKE_CXX_FLAGS="$DEBUG_CXXFLAGS" \
-                        -DCMAKE_SHARED_LINKER_FLAGS="$COMMON_LDFLAGS" \
-                        -DCMAKE_EXE_LINKER_FLAGS="$COMMON_LDFLAGS" \
                         -DCMAKE_INSTALL_PREFIX="$stage/install_debug"
 
                 cmake --build . --config Debug --parallel $AUTOBUILD_CPU_COUNT -v
@@ -257,8 +254,6 @@ pushd "$OPENJPEG_SOURCE_DIR"
                         -DCMAKE_BUILD_TYPE=Release \
                         -DCMAKE_C_FLAGS="$RELEASE_CFLAGS" \
                         -DCMAKE_CXX_FLAGS="$RELEASE_CXXFLAGS" \
-                        -DCMAKE_SHARED_LINKER_FLAGS="$COMMON_LDFLAGS" \
-                        -DCMAKE_EXE_LINKER_FLAGS="$COMMON_LDFLAGS" \
                         -DCMAKE_INSTALL_PREFIX="$stage/install_release"
 
                 cmake --build . --config Release --parallel $AUTOBUILD_CPU_COUNT
