@@ -278,7 +278,7 @@ pushd "$OPENJPEG_SOURCE_DIR"
                 echo "${version}" > "${stage}/VERSION.txt"
             popd
 
-            cp $stage/include/openjpeg-2.4/*.h "$stage/include/openjpeg"
+            cp $stage/install_release/include/openjpeg-2.4/*.h "$stage/include/openjpeg"
         ;;
     esac
     mkdir -p "$stage/LICENSES"
