@@ -235,8 +235,8 @@ pushd "$OPENJPEG_SOURCE_DIR"
                         -DCMAKE_BUILD_TYPE=Debug \
                         -DCMAKE_C_FLAGS="$DEBUG_CFLAGS" \
                         -DCMAKE_CXX_FLAGS="$DEBUG_CXXFLAGS" \
-                        -DCMAKE_SHARED_LINKER_FLAGS="$COMMON_LDFLAGS"
-                        -DCMAKE_EXE_LINKER_FLAGS="$COMMON_LDFLAGS"
+                        -DCMAKE_SHARED_LINKER_FLAGS="$COMMON_LDFLAGS" \
+                        -DCMAKE_EXE_LINKER_FLAGS="$COMMON_LDFLAGS" \
                         -DCMAKE_INSTALL_PREFIX="$stage/install_debug"
 
                 cmake --build . --config Debug --parallel $AUTOBUILD_CPU_COUNT -v
@@ -257,8 +257,8 @@ pushd "$OPENJPEG_SOURCE_DIR"
                         -DCMAKE_BUILD_TYPE=Release \
                         -DCMAKE_C_FLAGS="$RELEASE_CFLAGS" \
                         -DCMAKE_CXX_FLAGS="$RELEASE_CXXFLAGS" \
-                        -DCMAKE_SHARED_LINKER_FLAGS="$COMMON_LDFLAGS"
-                        -DCMAKE_EXE_LINKER_FLAGS="$COMMON_LDFLAGS"
+                        -DCMAKE_SHARED_LINKER_FLAGS="$COMMON_LDFLAGS" \
+                        -DCMAKE_EXE_LINKER_FLAGS="$COMMON_LDFLAGS" \
                         -DCMAKE_INSTALL_PREFIX="$stage/install_release"
 
                 cmake --build . --config Release --parallel $AUTOBUILD_CPU_COUNT
