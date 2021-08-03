@@ -201,12 +201,13 @@ pushd "$OPENJPEG_SOURCE_DIR"
             # So, clear out bits that shouldn't affect our configure-directed build
             # but which do nonetheless.
             #
-            unset DISTCC_HOSTS CC CXX CFLAGS CPPFLAGS CXXFLAGS
+            unset DISTCC_HOSTS CFLAGS CPPFLAGS CXXFLAGS
         
             # Default target per --address-size
-            opts="${TARGET_OPTS:--m$AUTOBUILD_ADDRSIZE}"
-            DEBUG_COMMON_FLAGS="$opts -Og -g -fPIC -DPIC"
-            RELEASE_COMMON_FLAGS="$opts -O3 -ffast-math -msse2 -g -fPIC -fstack-protector-strong -DPIC -D_FORTIFY_SOURCE=2"
+            opts="${TARGET_OPTS:--m$AUTOBUILD_ADDRSIZE} -fuse-ld=lld"
+            SIMD_FLAGS="-msse -msse2 -msse3 -mssse3 -msse4 -msse4.1 -msse4.2 -mcx16 -mpopcnt -mpclmul -maes"
+            DEBUG_COMMON_FLAGS="$opts -Og -g -fPIC -DPIC $SIMD_FLAGS"
+            RELEASE_COMMON_FLAGS="$opts -O3 -flto=thin -ffast-math -g -fPIC -DPIC -fstack-protector-strong -D_FORTIFY_SOURCE=2 $SIMD_FLAGS"
             DEBUG_CFLAGS="$DEBUG_COMMON_FLAGS"
             RELEASE_CFLAGS="$RELEASE_COMMON_FLAGS"
             DEBUG_CXXFLAGS="$DEBUG_COMMON_FLAGS -std=c++17"
