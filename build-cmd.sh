@@ -47,17 +47,10 @@ pushd "$OPENJPEG_SOURCE_DIR"
         windows*)
             load_vsvars
 
-            if [ "$AUTOBUILD_ADDRSIZE" = 32 ]
-            then
-                archflags="/arch:SSE2"
-            else
-                archflags=""
-            fi
-
             mkdir -p "build"
             pushd "build"
-                cmake -E env CFLAGS="$archflags" CXXFLAGS="$archflags /std:c++17 /permissive-" \
-                cmake .. -G "$AUTOBUILD_WIN_CMAKE_GEN" -A "$AUTOBUILD_WIN_VSPLATFORM" -DCMAKE_INSTALL_PREFIX=$stage -DLTO=ON
+                cmake .. -G "$AUTOBUILD_WIN_CMAKE_GEN" -A "$AUTOBUILD_WIN_VSPLATFORM" -DCMAKE_INSTALL_PREFIX=$stage -DCMAKE_C_STANDARD=17 \
+                    -DBUILD_CODEC=OFF
             
                 cmake --build . --config Debug --clean-first
                 cmake --build . --config Release --clean-first
@@ -67,7 +60,7 @@ pushd "$OPENJPEG_SOURCE_DIR"
 
                 cp src/lib/openjp2/opj_config.h "$stage/include/openjpeg"
 
-                # version will be (e.g.) "1.4.0"
+                # version will be (e.g.) "2.4.0"
                 version=`sed -n -E 's/#define OPJ_PACKAGE_VERSION "([0-9])[.]([0-9])[.]([0-9]).*/\1.\2.\3/p' "src/lib/openjp2/opj_config_private.h"`
                 # shortver will be (e.g.) "230": eliminate all '.' chars
                 # since the libs do not use micro in their filenames, chop off shortver at minor
@@ -84,35 +77,41 @@ pushd "$OPENJPEG_SOURCE_DIR"
             # Setup osx sdk platform
             SDKNAME="macosx"
             export SDKROOT=$(xcodebuild -version -sdk ${SDKNAME} Path)
-            export MACOSX_DEPLOYMENT_TARGET=10.13
+
+            # Deploy Targets
+            X86_DEPLOY=10.13
+            ARM64_DEPLOY=11.0
 
             # Setup build flags
-            ARCH_FLAGS="-arch x86_64"
-            SDK_FLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET} -isysroot ${SDKROOT}"
-            DEBUG_COMMON_FLAGS="$ARCH_FLAGS $SDK_FLAGS -O0 -g -msse4.2 -fPIC -DPIC"
-            RELEASE_COMMON_FLAGS="$ARCH_FLAGS $SDK_FLAGS -Ofast -ffast-math -g -msse4.2 -fPIC -DPIC -fstack-protector-strong"
+            ARCH_FLAGS_X86="-arch x86_64 -mmacosx-version-min=${X86_DEPLOY} -isysroot ${SDKROOT} -msse4.2"
+            ARCH_FLAGS_ARM64="-arch arm64 -mmacosx-version-min=${ARM64_DEPLOY} -isysroot ${SDKROOT}"
+            DEBUG_COMMON_FLAGS="-O0 -g -fPIC -DPIC"
+            RELEASE_COMMON_FLAGS="-Ofast -ffast-math -g -fPIC -DPIC -fstack-protector-strong"
             DEBUG_CFLAGS="$DEBUG_COMMON_FLAGS"
             RELEASE_CFLAGS="$RELEASE_COMMON_FLAGS"
             DEBUG_CXXFLAGS="$DEBUG_COMMON_FLAGS -std=c++17"
             RELEASE_CXXFLAGS="$RELEASE_COMMON_FLAGS -std=c++17"
             DEBUG_CPPFLAGS="-DPIC"
             RELEASE_CPPFLAGS="-DPIC"
-            DEBUG_LDFLAGS="$ARCH_FLAGS $SDK_FLAGS -Wl,-headerpad_max_install_names"
-            RELEASE_LDFLAGS="$ARCH_FLAGS $SDK_FLAGS -Wl,-headerpad_max_install_names"
+            DEBUG_LDFLAGS="-Wl,-headerpad_max_install_names"
+            RELEASE_LDFLAGS="-Wl,-headerpad_max_install_names"
+
+            # x86 Deploy Target
+            export MACOSX_DEPLOYMENT_TARGET=${X86_DEPLOY}
 
             mkdir -p "$stage/include/openjpeg"
             mkdir -p "$stage/lib/debug"
             mkdir -p "$stage/lib/release"
 
-            mkdir -p "build_debug"
-            pushd "build_debug"
-                CFLAGS="$DEBUG_CFLAGS" \
-                CXXFLAGS="$DEBUG_CXXFLAGS" \
+            mkdir -p "build_debug_x86"
+            pushd "build_debug_x86"
+                CFLAGS="$ARCH_FLAGS_X86 $DEBUG_CFLAGS" \
+                CXXFLAGS="$ARCH_FLAGS_X86 $DEBUG_CXXFLAGS" \
                 CPPFLAGS="$DEBUG_CPPFLAGS" \
-                LDFLAGS="$DEBUG_LDFLAGS" \
-                cmake .. -GXcode -DBUILD_SHARED_LIBS:BOOL=OFF \
-                    -DCMAKE_C_FLAGS="$DEBUG_CFLAGS" \
-                    -DCMAKE_CXX_FLAGS="$DEBUG_CXXFLAGS" \
+                LDFLAGS="$ARCH_FLAGS_X86 $DEBUG_LDFLAGS" \
+                cmake .. -GXcode -DBUILD_CODEC=OFF -DBUILD_SHARED_LIBS:BOOL=OFF \
+                    -DCMAKE_C_FLAGS="$ARCH_FLAGS_X86 $DEBUG_CFLAGS" \
+                    -DCMAKE_CXX_FLAGS="$ARCH_FLAGS_X86 $DEBUG_CXXFLAGS" \
                     -DCMAKE_XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL="0" \
                     -DCMAKE_XCODE_ATTRIBUTE_GCC_FAST_MATH=NO \
                     -DCMAKE_XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS=YES \
@@ -125,28 +124,27 @@ pushd "$OPENJPEG_SOURCE_DIR"
                     -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64 \
                     -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
                     -DCMAKE_OSX_SYSROOT=${SDKROOT} \
-                    -DCMAKE_OSX_ARCHITECTURES="x86_64" \
-                    -DCMAKE_MACOSX_RPATH=YES -DCMAKE_INSTALL_PREFIX=$stage
+                    -DCMAKE_MACOSX_RPATH=YES \
+                    -DCMAKE_INSTALL_PREFIX="$stage/debug_x86"
 
                 cmake --build . --config Debug
+                cmake --install . --config Debug
 
                 # conditionally run unit tests
                 if [ "${DISABLE_UNIT_TESTS:-0}" = "0" ]; then
                     ctest -C Debug
                 fi
-
-                cp -a bin/Debug/libopenjp2*.a* "${stage}/lib/debug/"
             popd
 
-            mkdir -p "build_release"
-            pushd "build_release"
-                CFLAGS="$RELEASE_CFLAGS" \
-                CXXFLAGS="$RELEASE_CXXFLAGS" \
+            mkdir -p "build_release_x86"
+            pushd "build_release_x86"
+                CFLAGS="$ARCH_FLAGS_X86 $RELEASE_CFLAGS" \
+                CXXFLAGS="$ARCH_FLAGS_X86 $RELEASE_CXXFLAGS" \
                 CPPFLAGS="$RELEASE_CPPFLAGS" \
-                LDFLAGS="$RELEASE_LDFLAGS" \
-                cmake .. -GXcode -DBUILD_SHARED_LIBS:BOOL=OFF \
-                    -DCMAKE_C_FLAGS="$RELEASE_CFLAGS" \
-                    -DCMAKE_CXX_FLAGS="$RELEASE_CXXFLAGS" \
+                LDFLAGS="$ARCH_FLAGS_X86 $RELEASE_LDFLAGS" \
+                cmake .. -GXcode -DBUILD_CODEC=OFF -DBUILD_SHARED_LIBS:BOOL=OFF \
+                    -DCMAKE_C_FLAGS="$ARCH_FLAGS_X86 $RELEASE_CFLAGS" \
+                    -DCMAKE_CXX_FLAGS="$ARCH_FLAGS_X86 $RELEASE_CXXFLAGS" \
                     -DCMAKE_XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL="fast" \
                     -DCMAKE_XCODE_ATTRIBUTE_GCC_FAST_MATH=YES \
                     -DCMAKE_XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS=YES \
@@ -160,19 +158,84 @@ pushd "$OPENJPEG_SOURCE_DIR"
                     -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64 \
                     -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
                     -DCMAKE_OSX_SYSROOT=${SDKROOT} \
-                    -DCMAKE_OSX_ARCHITECTURES="x86_64" \
-                    -DCMAKE_MACOSX_RPATH=YES -DCMAKE_INSTALL_PREFIX=$stage
+                    -DCMAKE_MACOSX_RPATH=YES \
+                    -DCMAKE_INSTALL_PREFIX="$stage/release_x86"
 
                 cmake --build . --config Release
+                cmake --install . --config Release
 
                 # conditionally run unit tests
                 if [ "${DISABLE_UNIT_TESTS:-0}" = "0" ]; then
                     ctest -C Release
                 fi
+            popd
 
-                cp -a bin/Release/libopenjp2*.a* "${stage}/lib/release/"
+            # ARM64 Deploy Target
+            export MACOSX_DEPLOYMENT_TARGET=${ARM64_DEPLOY}
 
-                cp src/lib/openjp2/opj_config.h "$stage/include/openjpeg"
+            mkdir -p "build_debug_arm64"
+            pushd "build_debug_arm64"
+                CFLAGS="$ARCH_FLAGS_ARM64 $DEBUG_CFLAGS" \
+                CXXFLAGS="$ARCH_FLAGS_ARM64 $DEBUG_CXXFLAGS" \
+                CPPFLAGS="$DEBUG_CPPFLAGS" \
+                LDFLAGS="$ARCH_FLAGS_ARM64 $DEBUG_LDFLAGS" \
+                cmake .. -GXcode -DBUILD_CODEC=OFF -DBUILD_SHARED_LIBS:BOOL=OFF \
+                    -DCMAKE_C_FLAGS="$ARCH_FLAGS_ARM64 $DEBUG_CFLAGS" \
+                    -DCMAKE_CXX_FLAGS="$ARCH_FLAGS_ARM64 $DEBUG_CXXFLAGS" \
+                    -DCMAKE_XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL="0" \
+                    -DCMAKE_XCODE_ATTRIBUTE_GCC_FAST_MATH=NO \
+                    -DCMAKE_XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS=YES \
+                    -DCMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT=dwarf \
+                    -DCMAKE_XCODE_ATTRIBUTE_LLVM_LTO=NO \
+                    -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD="c++17" \
+                    -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY="libc++" \
+                    -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="" \
+                    -DCMAKE_OSX_ARCHITECTURES:STRING=arm64 \
+                    -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
+                    -DCMAKE_OSX_SYSROOT=${SDKROOT} \
+                    -DCMAKE_MACOSX_RPATH=YES \
+                    -DCMAKE_INSTALL_PREFIX="$stage/debug_arm64"
+
+                cmake --build . --config Debug
+                cmake --install . --config Debug
+
+                # conditionally run unit tests
+                if [ "${DISABLE_UNIT_TESTS:-0}" = "0" ]; then
+                    ctest -C Debug
+                fi
+            popd
+
+            mkdir -p "build_release_arm64"
+            pushd "build_release_arm64"
+                CFLAGS="$ARCH_FLAGS_ARM64 $RELEASE_CFLAGS" \
+                CXXFLAGS="$ARCH_FLAGS_ARM64 $RELEASE_CXXFLAGS" \
+                CPPFLAGS="$RELEASE_CPPFLAGS" \
+                LDFLAGS="$ARCH_FLAGS_ARM64 $RELEASE_LDFLAGS" \
+                cmake .. -GXcode -DBUILD_CODEC=OFF -DBUILD_SHARED_LIBS:BOOL=OFF \
+                    -DCMAKE_C_FLAGS="$ARCH_FLAGS_ARM64 $RELEASE_CFLAGS" \
+                    -DCMAKE_CXX_FLAGS="$ARCH_FLAGS_ARM64 $RELEASE_CXXFLAGS" \
+                    -DCMAKE_XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL="fast" \
+                    -DCMAKE_XCODE_ATTRIBUTE_GCC_FAST_MATH=YES \
+                    -DCMAKE_XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS=YES \
+                    -DCMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT=dwarf \
+                    -DCMAKE_XCODE_ATTRIBUTE_LLVM_LTO=NO \
+                    -DCMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING=YES \
+                    -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD="c++17" \
+                    -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY="libc++" \
+                    -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="" \
+                    -DCMAKE_OSX_ARCHITECTURES:STRING=arm64 \
+                    -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
+                    -DCMAKE_OSX_SYSROOT=${SDKROOT} \
+                    -DCMAKE_MACOSX_RPATH=YES \
+                    -DCMAKE_INSTALL_PREFIX="$stage/release_arm64"
+
+                cmake --build . --config Release
+                cmake --install . --config Release
+
+                # conditionally run unit tests
+                if [ "${DISABLE_UNIT_TESTS:-0}" = "0" ]; then
+                    ctest -C Release
+                fi
 
                 # version will be (e.g.) "1.4.0"
                 version=`sed -n -E 's/#define OPJ_PACKAGE_VERSION "([0-9])[.]([0-9])[.]([0-9]).*/\1.\2.\3/p' "src/lib/openjp2/opj_config_private.h"`
@@ -184,8 +247,14 @@ pushd "$OPENJPEG_SOURCE_DIR"
                 echo "${version}" > "${stage}/VERSION.txt"
             popd
 
-            cp src/lib/openjp2/openjpeg.h "$stage/include/openjpeg"
-            cp src/lib/openjp2/opj_stdint.h "$stage/include/openjpeg"
+            # create fat libs
+            lipo -create ${stage}/debug_x86/lib/libopenjp2.a ${stage}/debug_arm64/lib/libopenjp2.a -output ${stage}/lib/debug/libopenjp2.a
+            lipo -create ${stage}/release_x86/lib/libopenjp2.a ${stage}/release_arm64/lib/libopenjp2.a -output ${stage}/lib/release/libopenjp2.a
+
+            # copy includes
+            cp -a $stage/release_x86/include/openjpeg-*/*.h $stage/include/openjpeg/
+
+
         ;;
         linux*)
             # Linux build environment at Linden comes pre-polluted with stuff that can
@@ -230,7 +299,7 @@ pushd "$OPENJPEG_SOURCE_DIR"
                 CFLAGS="$DEBUG_CFLAGS" \
                 CXXFLAGS="$DEBUG_CXXFLAGS" \
                 CPPFLAGS="$DEBUG_CPPFLAGS" \
-                    cmake ../ -G"Ninja" \
+                    cmake ../ -G"Ninja" -DBUILD_CODEC=OFF \
                         -DCMAKE_BUILD_TYPE=Debug \
                         -DCMAKE_C_FLAGS="$DEBUG_CFLAGS" \
                         -DCMAKE_CXX_FLAGS="$DEBUG_CXXFLAGS" \
@@ -251,7 +320,7 @@ pushd "$OPENJPEG_SOURCE_DIR"
                 CXXFLAGS="$RELEASE_CXXFLAGS" \
                 CPPFLAGS="$RELEASE_CPPFLAGS" \
                     cmake ../ -G"Ninja" \
-                        -DCMAKE_BUILD_TYPE=Release \
+                        -DCMAKE_BUILD_TYPE=Release -DBUILD_CODEC=OFF \
                         -DCMAKE_C_FLAGS="$RELEASE_CFLAGS" \
                         -DCMAKE_CXX_FLAGS="$RELEASE_CXXFLAGS" \
                         -DCMAKE_INSTALL_PREFIX="$stage/install_release"
@@ -273,7 +342,7 @@ pushd "$OPENJPEG_SOURCE_DIR"
                 echo "${version}" > "${stage}/VERSION.txt"
             popd
 
-            cp $stage/install_release/include/openjpeg-2.4/*.h "$stage/include/openjpeg"
+            cp $stage/install_release/include/openjpeg-*/*.h "$stage/include/openjpeg"
         ;;
     esac
     mkdir -p "$stage/LICENSES"
