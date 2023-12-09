@@ -36,7 +36,7 @@
  */
 #define OPJ_VALIDATION_SIZE 10
 
-opj_procedure_list_t *  opj_procedure_list_create()
+opj_procedure_list_t *  opj_procedure_list_create(void)
 {
     /* memory allocation */
     opj_procedure_list_t * l_validation = (opj_procedure_list_t *) opj_calloc(1,
