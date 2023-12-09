@@ -71,7 +71,6 @@ pushd "$OPENJPEG_SOURCE_DIR"
             popd
 
             cp src/lib/openjp2/openjpeg.h "$stage/include/openjpeg"
-            cp src/lib/openjp2/opj_stdint.h "$stage/include/openjpeg"
         ;;
         darwin*)
             # Setup osx sdk platform
