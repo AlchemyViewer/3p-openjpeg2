@@ -106,7 +106,6 @@ pushd "$OPENJPEG_SOURCE_DIR"
                     -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="" \
                     -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64 \
                     -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
-                    -DCMAKE_OSX_SYSROOT=${SDKROOT} \
                     -DCMAKE_MACOSX_RPATH=YES \
                     -DCMAKE_INSTALL_PREFIX="$stage/release_x86"
 
@@ -137,7 +136,6 @@ pushd "$OPENJPEG_SOURCE_DIR"
                     -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="" \
                     -DCMAKE_OSX_ARCHITECTURES:STRING=arm64 \
                     -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
-                    -DCMAKE_OSX_SYSROOT=${SDKROOT} \
                     -DCMAKE_MACOSX_RPATH=YES \
                     -DCMAKE_INSTALL_PREFIX="$stage/release_arm64"
 
