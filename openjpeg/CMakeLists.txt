@@ -197,10 +197,10 @@ if(${CMAKE_C_COMPILER_ID} STREQUAL GNU OR ${CMAKE_C_COMPILER_ID} STREQUAL Clang 
   # For all builds, make sure openjpeg is std99 compliant:
   # set(CMAKE_C_FLAGS "-Wall -std=c99 ${CMAKE_C_FLAGS}") # FIXME: this setting prevented us from setting a coverage build.
   # Do not use ffast-math for all build, it would produce incorrect results, only set for release:
-  # set(OPENJPEG_LIBRARY_COMPILE_OPTIONS ${OPENJPEG_LIBRARY_COMPILE_OPTIONS} "$<$<CONFIG:Release>:-ffast-math>")
+  set(OPENJPEG_LIBRARY_COMPILE_OPTIONS ${OPENJPEG_LIBRARY_COMPILE_OPTIONS} "$<$<CONFIG:Release>:-ffast-math>")
   set(OPENJP2_COMPILE_OPTIONS ${OPENJP2_COMPILE_OPTIONS} -Wall -Wextra -Wconversion -Wunused-parameter -Wdeclaration-after-statement -Werror=declaration-after-statement)
 elseif(${CMAKE_C_COMPILER_ID} STREQUAL MSVC)
-  #set(OPENJPEG_LIBRARY_COMPILE_OPTIONS ${OPENJPEG_LIBRARY_COMPILE_OPTIONS} "$<$<CONFIG:Release>:/fp:fast>")
+  set(OPENJPEG_LIBRARY_COMPILE_OPTIONS ${OPENJPEG_LIBRARY_COMPILE_OPTIONS} "$<$<CONFIG:Release>:/fp:fast>")
   #set(OPENJP2_COMPILE_OPTIONS ${OPENJP2_COMPILE_OPTIONS} "$<$<CONFIG:Release>:/fp:fast>" "$<$<CONFIG:Release>:/GL>")
   #set(OPENJP2_LINK_OPTIONS ${OPENJP2_LINK_OPTIONS} "$<$<CONFIG:Release>:/DEBUG:FULL>" "$<$<CONFIG:Release>:/LTCG>")
   set(OPENJP2_LINK_OPTIONS ${OPENJP2_LINK_OPTIONS} "$<$<CONFIG:Release>:/DEBUG:FULL>")
