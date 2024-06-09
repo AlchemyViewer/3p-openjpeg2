@@ -94,6 +94,7 @@ pushd "$OPENJPEG_SOURCE_DIR"
                 CXXFLAGS="$CXX_OPTS_X86" \
                 LDFLAGS="$LINK_OPTS_X86" \
                 cmake .. -G Ninja -DBUILD_CODEC=OFF -DBUILD_SHARED_LIBS:BOOL=OFF \
+                    -DCMAKE_BUILD_TYPE=Release \
                     -DCMAKE_C_FLAGS="$C_OPTS_X86" \
                     -DCMAKE_CXX_FLAGS="$CXX_OPTS_X86" \
                     -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64 \
@@ -116,6 +117,7 @@ pushd "$OPENJPEG_SOURCE_DIR"
                 CXXFLAGS="$CXX_OPTS_ARM64" \
                 LDFLAGS="$LINK_OPTS_ARM64" \
                 cmake .. -G Ninja -DBUILD_CODEC=OFF -DBUILD_SHARED_LIBS:BOOL=OFF \
+                    -DCMAKE_BUILD_TYPE=Release \
                     -DCMAKE_C_FLAGS="$C_OPTS_ARM64" \
                     -DCMAKE_CXX_FLAGS="$CXX_OPTS_ARM64" \
                     -DCMAKE_OSX_ARCHITECTURES:STRING=arm64 \
