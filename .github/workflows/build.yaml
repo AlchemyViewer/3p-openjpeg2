@@ -14,6 +14,7 @@ jobs:
           build-variables-repo: alchemyviewer/build-variables
           build-variables-ref: alchemy
           apt-packages: ninja-build
+          brew-packages: ninja
   release:
     needs: build
     runs-on: [ubuntu-latest]
