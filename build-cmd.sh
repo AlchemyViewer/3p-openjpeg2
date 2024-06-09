@@ -49,11 +49,11 @@ pushd "$OPENJPEG_SOURCE_DIR"
 
             mkdir -p "build"
             pushd "build"
-                cmake .. -G "$AUTOBUILD_WIN_CMAKE_GEN" -A "$AUTOBUILD_WIN_VSPLATFORM" -DCMAKE_INSTALL_PREFIX=$stage -DCMAKE_C_STANDARD=17 \
+                cmake .. -G "Ninja Multi-Config" -DCMAKE_INSTALL_PREFIX=$stage -DCMAKE_C_STANDARD=17 \
                     -DBUILD_CODEC=OFF
             
-                cmake --build . --config Debug --clean-first
-                cmake --build . --config Release --clean-first
+                cmake --build . --config Debug
+                cmake --build . --config Release
 
                 cp bin/Release/openjp2{.dll,.lib,.pdb} "$stage/lib/release"
                 cp bin/Debug/openjp2{.dll,.lib,.pdb} "$stage/lib/debug"
@@ -75,11 +75,12 @@ pushd "$OPENJPEG_SOURCE_DIR"
         ;;
         darwin*)
             # Setup build flags
-            CFLAGS_X86="-arch x86_64 $LL_BUILD_RELEASE_CFLAGS"
-            CFLAGS_ARM64="-arch arm64 $LL_BUILD_RELEASE_CFLAGS"
-
-            CXXFLAGS_X86="-arch x86_64 $LL_BUILD_RELEASE_CXXFLAGS"
-            CXXFLAGS_ARM64="-arch arm64 $LL_BUILD_RELEASE_CXXFLAGS"
+            C_OPTS_X86="-arch x86_64 $LL_BUILD_RELEASE_CFLAGS"
+            C_OPTS_ARM64="-arch arm64 $LL_BUILD_RELEASE_CFLAGS"
+            CXX_OPTS_X86="-arch x86_64 $LL_BUILD_RELEASE_CXXFLAGS"
+            CXX_OPTS_ARM64="-arch arm64 $LL_BUILD_RELEASE_CXXFLAGS"
+            LINK_OPTS_X86="-arch x86_64 $LL_BUILD_RELEASE_LINKER"
+            LINK_OPTS_ARM64="-arch arm64 $LL_BUILD_RELEASE_LINKER"
 
             # deploy target
             export MACOSX_DEPLOYMENT_TARGET=${LL_BUILD_DARWIN_BASE_DEPLOY_TARGET}
@@ -89,21 +90,12 @@ pushd "$OPENJPEG_SOURCE_DIR"
 
             mkdir -p "build_release_x86"
             pushd "build_release_x86"
-                CFLAGS="$CFLAGS_X86" \
-                CXXFLAGS="$CXXFLAGS_X86" \
-                cmake .. -GXcode -DBUILD_CODEC=OFF -DBUILD_SHARED_LIBS:BOOL=OFF \
-                    -DCMAKE_C_FLAGS="$CFLAGS_X86" \
-                    -DCMAKE_CXX_FLAGS="$CXXFLAGS_X86" \
-                    -DCMAKE_XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL="fast" \
-                    -DCMAKE_XCODE_ATTRIBUTE_GCC_FAST_MATH=YES \
-                    -DCMAKE_XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS=YES \
-                    -DCMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT=dwarf \
-                    -DCMAKE_XCODE_ATTRIBUTE_LLVM_LTO=NO \
-                    -DCMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING=YES \
-                    -DCMAKE_XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS=sse4.2 \
-                    -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD="c++17" \
-                    -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY="libc++" \
-                    -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="" \
+                CFLAGS="$C_OPTS_X86" \
+                CXXFLAGS="$CXX_OPTS_X86" \
+                LDFLAGS="$LINK_OPTS_X86" \
+                cmake .. -G Ninja -DBUILD_CODEC=OFF -DBUILD_SHARED_LIBS:BOOL=OFF \
+                    -DCMAKE_C_FLAGS="$C_OPTS_X86" \
+                    -DCMAKE_CXX_FLAGS="$CXX_OPTS_X86" \
                     -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64 \
                     -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
                     -DCMAKE_MACOSX_RPATH=YES \
@@ -120,20 +112,12 @@ pushd "$OPENJPEG_SOURCE_DIR"
 
             mkdir -p "build_release_arm64"
             pushd "build_release_arm64"
-                CFLAGS="$CFLAGS_ARM64" \
-                CXXFLAGS="$CXXFLAGS_X86" \
-                cmake .. -GXcode -DBUILD_CODEC=OFF -DBUILD_SHARED_LIBS:BOOL=OFF \
-                    -DCMAKE_C_FLAGS="$CFLAGS_ARM64" \
-                    -DCMAKE_CXX_FLAGS="$CXXFLAGS_ARM64" \
-                    -DCMAKE_XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL="fast" \
-                    -DCMAKE_XCODE_ATTRIBUTE_GCC_FAST_MATH=YES \
-                    -DCMAKE_XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS=YES \
-                    -DCMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT=dwarf \
-                    -DCMAKE_XCODE_ATTRIBUTE_LLVM_LTO=NO \
-                    -DCMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING=YES \
-                    -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD="c++17" \
-                    -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY="libc++" \
-                    -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="" \
+                CFLAGS="$C_OPTS_ARM64" \
+                CXXFLAGS="$CXX_OPTS_ARM64" \
+                LDFLAGS="$LINK_OPTS_ARM64" \
+                cmake .. -G Ninja -DBUILD_CODEC=OFF -DBUILD_SHARED_LIBS:BOOL=OFF \
+                    -DCMAKE_C_FLAGS="$C_OPTS_ARM64" \
+                    -DCMAKE_CXX_FLAGS="$CXX_OPTS_ARM64" \
                     -DCMAKE_OSX_ARCHITECTURES:STRING=arm64 \
                     -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
                     -DCMAKE_MACOSX_RPATH=YES \
