@@ -124,7 +124,7 @@ pushd "$OPENJPEG_SOURCE_DIR"
                 CXXFLAGS="$CXXFLAGS_X86" \
                 cmake .. -GXcode -DBUILD_CODEC=OFF -DBUILD_SHARED_LIBS:BOOL=OFF \
                     -DCMAKE_C_FLAGS="$CFLAGS_ARM64" \
-                    -DCMAKE_CXX_FLAGS="$CXXFLAGS_X86" \
+                    -DCMAKE_CXX_FLAGS="$CXXFLAGS_ARM64" \
                     -DCMAKE_XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL="fast" \
                     -DCMAKE_XCODE_ATTRIBUTE_GCC_FAST_MATH=YES \
                     -DCMAKE_XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS=YES \
